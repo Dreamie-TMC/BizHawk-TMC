@@ -12,7 +12,7 @@
 		<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
 		<ErrorReport>prompt</ErrorReport>
 		<FileAlignment>512</FileAlignment>
-		<FileUpgradeFlags/>
+		<FileUpgradeFlags />
 		<Install>true</Install>
 		<InstallFrom>Disk</InstallFrom>
 		<IsWebBootstrapper>false</IsWebBootstrapper>
@@ -29,8 +29,8 @@
 		<PublishUrl>publish/</PublishUrl>
 		<RootNamespace>BizHawk.Client.DiscoHawk</RootNamespace>
 		<SchemaVersion>2.0</SchemaVersion>
-		<StartupObject/>
-		<TargetFrameworkProfile/>
+		<StartupObject />
+		<TargetFrameworkProfile />
 		<TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
 		<UpdateEnabled>false</UpdateEnabled>
 		<UpdateInterval>7</UpdateInterval>
@@ -38,7 +38,7 @@
 		<UpdateMode>Foreground</UpdateMode>
 		<UpdatePeriodically>false</UpdatePeriodically>
 		<UpdateRequired>false</UpdateRequired>
-		<UpgradeBackupLocation/>
+		<UpgradeBackupLocation />
 		<UseApplicationTrust>false</UseApplicationTrust>
 		<UseVSHostingProcess>false</UseVSHostingProcess>
 	</PropertyGroup>
@@ -83,12 +83,8 @@
 		<!--<Reference Include="System.Xml" />-->
 	</ItemGroup>
 	<ItemGroup>
-		<ProjectReference Include="$(SolutionDir)BizHawk.Common/BizHawk.Common.csproj"
-			Name="BizHawk.Common"
-			Project="{866F8D13-0678-4FF9-80A4-A3993FD4D8A3}" />
-		<ProjectReference Include="$(SolutionDir)BizHawk.Emulation.DiscSystem/BizHawk.Emulation.DiscSystem.csproj"
-			Name="BizHawk.Emulation.DiscSystem"
-			Project="{f51946ea-827f-4d82-b841-1f2f6d060312}" />
+		<ProjectReference Include="$(SolutionDir)BizHawk.Common/BizHawk.Common.csproj" Name="BizHawk.Common" Project="{866F8D13-0678-4FF9-80A4-A3993FD4D8A3}" />
+		<ProjectReference Include="$(SolutionDir)BizHawk.Emulation.DiscSystem/BizHawk.Emulation.DiscSystem.csproj" Name="BizHawk.Emulation.DiscSystem" Project="{f51946ea-827f-4d82-b841-1f2f6d060312}" />
 	</ItemGroup>
 	<ItemGroup>
 		<Compile Include="**/*.cs" />

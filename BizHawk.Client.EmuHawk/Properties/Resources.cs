@@ -18,6 +18,18 @@ namespace BizHawk.Client.EmuHawk.Properties
 		/// <param name="filename">Dir separator is '<c>.</c>'. Filename is relative to <c>&lt;NS>/images</c> and omits <c>.ico</c> extension.</param>
 		private static Icon ReadEmbeddedIcon(string filename) => new Icon(Asm.GetManifestResourceStream($"BizHawk.Client.EmuHawk.images.{filename}.ico"));
 
+		internal static readonly Bitmap A = ReadEmbeddedBitmap("A");
+		internal static readonly Bitmap B = ReadEmbeddedBitmap("B");
+		internal static readonly Bitmap Down = ReadEmbeddedBitmap("Down");
+		internal static readonly Bitmap Up = ReadEmbeddedBitmap("Up");
+		internal static readonly Bitmap Left = ReadEmbeddedBitmap("Left");
+		internal static readonly Bitmap Right = ReadEmbeddedBitmap("Right");
+		internal static readonly Bitmap L = ReadEmbeddedBitmap("L");
+		internal static readonly Bitmap R = ReadEmbeddedBitmap("R");
+		internal static readonly Bitmap Start = ReadEmbeddedBitmap("Start");
+		internal static readonly Bitmap Select = ReadEmbeddedBitmap("Select");
+		internal static readonly Bitmap Border = ReadEmbeddedBitmap("Border");
+		internal static readonly Bitmap Layout = ReadEmbeddedBitmap("Layout");
 		internal static readonly Bitmap add = ReadEmbeddedBitmap("add");
 		internal static readonly Bitmap AddEdit = ReadEmbeddedBitmap("AddEdit");
 		internal static readonly Bitmap addWatch = ReadEmbeddedBitmapAt("images.addWatch.ico");
@@ -117,6 +129,8 @@ namespace BizHawk.Client.EmuHawk.Properties
 		internal static readonly Bitmap mame = ReadEmbeddedBitmap("mame");
 		internal static readonly Bitmap MessageConfig = ReadEmbeddedBitmap("MessageConfig");
 		internal static readonly Bitmap mGba = ReadEmbeddedBitmap("mgba-16");
+		internal static readonly Icon MinishCapToolsIcon = ReadEmbeddedIcon("minishcaptools");
+		internal static readonly Bitmap MinishCapToolsMenuIcon = ReadEmbeddedBitmap("minishcaptoolsmenuicon");
 		internal static readonly Icon monitor_MultiSize = ReadEmbeddedIcon("monitor");
 		internal static readonly Bitmap monitor = ReadEmbeddedBitmap("monitor");
 		internal static readonly Bitmap MoveBottom = ReadEmbeddedBitmapAt("Resources.MoveBottom.png");

@@ -197,6 +197,7 @@ namespace BizHawk.Client.EmuHawk
 				toolStripMenuItem67.Image = Properties.Resources.LoadConfig;
 				ScreenshotContextMenuItem.Image = Properties.Resources.camera;
 				CloseRomContextMenuItem.Image = Properties.Resources.Close;
+				MinishCapToolsMenuItem.Image = Properties.Resources.MinishCapToolsMenuIcon;
 			}
 
 			GlobalWin.MainForm = this;
@@ -1534,7 +1535,7 @@ namespace BizHawk.Client.EmuHawk
 				str += $"{VersionInfo.CustomBuildString} ";
 			}
 
-			str += Emulator.IsNull() ? "BizHawk" : Emulator.System().DisplayName;
+			str += Emulator.IsNull() ? "MinisHawk" : Emulator.System().DisplayName;
 
 			if (VersionInfo.DeveloperBuild)
 			{
@@ -3590,6 +3591,11 @@ namespace BizHawk.Client.EmuHawk
 			{
 				var leftPart = path.Split('|')[0];
 				Config.PathEntries.LastRomPath = Path.GetFullPath(Path.GetDirectoryName(leftPart) ?? "");
+			}
+
+			if (MinishCapTools.Config.IsValidMinishCapRom(Global.Game.Hash))
+			{
+				Tools.Load<MinishCapTools.ToolWindow>();
 			}
 
 			return true;

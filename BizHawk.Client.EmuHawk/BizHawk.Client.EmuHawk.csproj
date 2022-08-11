@@ -14,7 +14,7 @@
 		<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
 		<ErrorReport>prompt</ErrorReport>
 		<FileAlignment>512</FileAlignment>
-		<FileUpgradeFlags/>
+		<FileUpgradeFlags />
 		<Install>true</Install>
 		<InstallFrom>Disk</InstallFrom>
 		<IsWebBootstrapper>false</IsWebBootstrapper>
@@ -33,7 +33,7 @@
 		<RootNamespace>BizHawk.Client.EmuHawk</RootNamespace>
 		<SchemaVersion>2.0</SchemaVersion>
 		<StartupObject>BizHawk.Client.EmuHawk.Program</StartupObject>
-		<TargetFrameworkProfile/>
+		<TargetFrameworkProfile />
 		<TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
 		<UpdateEnabled>false</UpdateEnabled>
 		<UpdateInterval>7</UpdateInterval>
@@ -41,7 +41,7 @@
 		<UpdateMode>Foreground</UpdateMode>
 		<UpdatePeriodically>false</UpdatePeriodically>
 		<UpdateRequired>false</UpdateRequired>
-		<UpgradeBackupLocation/>
+		<UpgradeBackupLocation />
 		<UseApplicationTrust>false</UseApplicationTrust>
 		<UseVSHostingProcess>false</UseVSHostingProcess>
 	</PropertyGroup>
@@ -93,37 +93,17 @@
 	<Import Project="$(SolutionDir)CommonRefAssemblies.props" Condition=" '$(OS)' != 'Windows_NT' " />
 	<Import Project="ProjectPkgRefs.props" Condition=" '$(OS)' != 'Windows_NT' " />
 	<ItemGroup Condition=" '$(OS)' == 'Windows_NT' ">
-		<Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed"
-			HintPath="$(SolutionDir)packages/Newtonsoft.Json.12.0.3/lib/net45/Newtonsoft.Json.dll"
-			Private="true" />
-		<Reference Include="OpenTK.GLControl, Version=3.0.1.0, Culture=neutral, PublicKeyToken=bad199fe84eb3df4"
-			HintPath="$(SolutionDir)packages/OpenTK.GLControl.3.0.1/lib/net20/OpenTK.GLControl.dll"
-			Private="true" />
-		<Reference Include="ICSharpCode.SharpZipLib, Version=1.1.0.145, Culture=neutral, PublicKeyToken=1b03e6acf1164f73"
-			HintPath="$(SolutionDir)packages/SharpZipLib.1.1.0/lib/net45/ICSharpCode.SharpZipLib.dll"
-			Private="true" />
-		<Reference Include="System.Drawing.Common, Version=4.0.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51"
-			HintPath="$(SolutionDir)packages/System.Drawing.Common.4.7.0/lib/net461/System.Drawing.Common.dll"
-			Private="true" />
+		<Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed" HintPath="$(SolutionDir)packages/Newtonsoft.Json.12.0.3/lib/net45/Newtonsoft.Json.dll" Private="true" />
+		<Reference Include="OpenTK.GLControl, Version=3.0.1.0, Culture=neutral, PublicKeyToken=bad199fe84eb3df4" HintPath="$(SolutionDir)packages/OpenTK.GLControl.3.0.1/lib/net20/OpenTK.GLControl.dll" Private="true" />
+		<Reference Include="ICSharpCode.SharpZipLib, Version=1.1.0.145, Culture=neutral, PublicKeyToken=1b03e6acf1164f73" HintPath="$(SolutionDir)packages/SharpZipLib.1.1.0/lib/net45/ICSharpCode.SharpZipLib.dll" Private="true" />
+		<Reference Include="System.Drawing.Common, Version=4.0.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51" HintPath="$(SolutionDir)packages/System.Drawing.Common.4.7.0/lib/net461/System.Drawing.Common.dll" Private="true" />
 	</ItemGroup>
 	<ItemGroup>
-		<Reference Include="GongShell"
-			HintPath="$(SolutionDir)References/GongShell.dll"
-			Private="true" />
-		<Reference Include="NLua, Version=1.3.2.0, Culture=neutral, processorArchitecture=MSIL"
-			HintPath="$(SolutionDir)output/dll/nlua/NLua.dll"
-			Private="true"
-			SpecificVersion="false" />
-		<Reference Include="OpenTK, Version=1.1.0.0, Culture=neutral, PublicKeyToken=bad199fe84eb3df4, processorArchitecture=MSIL"
-			HintPath="$(SolutionDir)References/OpenTK.dll"
-			Private="true"
-			SpecificVersion="false" />
-		<Reference Include="SlimDX"
-			HintPath="$(SolutionDir)References/x64/SlimDX.dll"
-			Private="true" />
-		<Reference Include="System.ComponentModel.Annotations, Version=4.2.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
-			HintPath="$(SolutionDir)References/System.ComponentModel.Annotations.dll"
-			Private="true" />
+		<Reference Include="GongShell" HintPath="$(SolutionDir)References/GongShell.dll" Private="true" />
+		<Reference Include="NLua, Version=1.3.2.0, Culture=neutral, processorArchitecture=MSIL" HintPath="$(SolutionDir)output/dll/nlua/NLua.dll" Private="true" SpecificVersion="false" />
+		<Reference Include="OpenTK, Version=1.1.0.0, Culture=neutral, PublicKeyToken=bad199fe84eb3df4, processorArchitecture=MSIL" HintPath="$(SolutionDir)References/OpenTK.dll" Private="true" SpecificVersion="false" />
+		<Reference Include="SlimDX" HintPath="$(SolutionDir)References/x64/SlimDX.dll" Private="true" />
+		<Reference Include="System.ComponentModel.Annotations, Version=4.2.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" HintPath="$(SolutionDir)References/System.ComponentModel.Annotations.dll" Private="true" />
 	</ItemGroup>
 	<ItemGroup>
 		<Reference Include="Microsoft.CSharp" />
@@ -144,24 +124,12 @@
 		<!--<Reference Include="WindowsBase" />-->
 	</ItemGroup>
 	<ItemGroup>
-		<ProjectReference Include="$(SolutionDir)BizHawk.Client.Common/BizHawk.Client.Common.csproj"
-			Name="BizHawk.Client.Common"
-			Project="{24A0AA3C-B25F-4197-B23D-476D6462DBA0}" />
-		<ProjectReference Include="$(SolutionDir)BizHawk.Common/BizHawk.Common.csproj"
-			Name="BizHawk.Common"
-			Project="{866F8D13-0678-4FF9-80A4-A3993FD4D8A3}" />
-		<ProjectReference Include="$(SolutionDir)BizHawk.Emulation.Common/BizHawk.Emulation.Common.csproj"
-			Name="BizHawk.Emulation.Common"
-			Project="{e1a23168-b571-411c-b360-2229e7225e0e}" />
-		<ProjectReference Include="$(SolutionDir)BizHawk.Emulation.Cores/BizHawk.Emulation.Cores.csproj"
-			Name="BizHawk.Emulation.Cores"
-			Project="{197D4314-8A9F-49BA-977D-54ACEFAEB6BA}" />
-		<ProjectReference Include="$(SolutionDir)BizHawk.WinForms.Controls/BizHawk.WinForms.Controls.csproj"
-			Name="BizHawk.WinForms.Controls"
-			Project="{B5A2214B-3CB0-48C4-8DB1-98B38D48AC4A}" />
-		<ProjectReference Include="$(SolutionDir)Bizware/BizHawk.Bizware.BizwareGL/BizHawk.Bizware.BizwareGL.csproj"
-			Name="BizHawk.Bizware.BizwareGL"
-			Project="{9F84A0B2-861E-4EF4-B89B-5E2A3F38A465}" />
+		<ProjectReference Include="$(SolutionDir)BizHawk.Client.Common/BizHawk.Client.Common.csproj" Name="BizHawk.Client.Common" Project="{24A0AA3C-B25F-4197-B23D-476D6462DBA0}" />
+		<ProjectReference Include="$(SolutionDir)BizHawk.Common/BizHawk.Common.csproj" Name="BizHawk.Common" Project="{866F8D13-0678-4FF9-80A4-A3993FD4D8A3}" />
+		<ProjectReference Include="$(SolutionDir)BizHawk.Emulation.Common/BizHawk.Emulation.Common.csproj" Name="BizHawk.Emulation.Common" Project="{e1a23168-b571-411c-b360-2229e7225e0e}" />
+		<ProjectReference Include="$(SolutionDir)BizHawk.Emulation.Cores/BizHawk.Emulation.Cores.csproj" Name="BizHawk.Emulation.Cores" Project="{197D4314-8A9F-49BA-977D-54ACEFAEB6BA}" />
+		<ProjectReference Include="$(SolutionDir)BizHawk.WinForms.Controls/BizHawk.WinForms.Controls.csproj" Name="BizHawk.WinForms.Controls" Project="{B5A2214B-3CB0-48C4-8DB1-98B38D48AC4A}" />
+		<ProjectReference Include="$(SolutionDir)Bizware/BizHawk.Bizware.BizwareGL/BizHawk.Bizware.BizwareGL.csproj" Name="BizHawk.Bizware.BizwareGL" Project="{9F84A0B2-861E-4EF4-B89B-5E2A3F38A465}" />
 	</ItemGroup>
 	<ItemGroup>
 		<Compile Include="**/*.cs" />

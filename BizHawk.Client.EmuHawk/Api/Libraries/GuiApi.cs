@@ -246,6 +246,34 @@ namespace BizHawk.Client.EmuHawk
 			}
 		}
 
+		public bool CacheImage(string identifier, Image image)
+		{
+			var isCached = _imageCache.ContainsKey(identifier);
+			if (isCached) return false;
+			
+			_imageCache.Add(identifier, image);
+			return true;
+		}
+
+		public void DrawImageFromCache(string identifier, int x, int y, int? width = null, int? height = null)
+		{
+			using var g = GetGraphics();
+			var isCached = _imageCache.ContainsKey(identifier);
+			if (!isCached) return;
+			var img = _imageCache[identifier];
+			g.CompositingMode = _compositingMode;
+			g.DrawImage(
+				img,
+				new Rectangle(x, y, width ?? img.Width, height ?? img.Height),
+				0,
+				0,
+				img.Width,
+				img.Height,
+				GraphicsUnit.Pixel,
+				_attributes
+			);
+		}
+
 		public void DrawImage(string path, int x, int y, int? width = null, int? height = null, bool cache = true)
 		{
 			if (!File.Exists(path))

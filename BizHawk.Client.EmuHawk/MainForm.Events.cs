@@ -1428,6 +1428,7 @@ namespace BizHawk.Client.EmuHawk
 
 			GameSharkConverterMenuItem.Enabled = Tools.IsAvailable<GameShark>();
 			MacroToolMenuItem.Enabled = MovieSession.Movie.IsActive() && Tools.IsAvailable<MacroInputTool>();
+			MinishCapToolsMenuItem.Enabled = Tools.IsAvailable<MinishCapTools.ToolWindow>();
 			VirtualPadMenuItem.Enabled = Emulator.ControllerDefinition.Any();
 		}
 
@@ -3276,6 +3277,15 @@ namespace BizHawk.Client.EmuHawk
 			}
 		}
 
+		#endregion
+
+		#region Minish Cap Tools
+		
+		private void minishCapToolsToolStripMenuItem_Click(object sender, EventArgs e)
+		{
+			Tools.Load<MinishCapTools.ToolWindow>();
+		}
+		
 		#endregion
 	}
 }

@@ -123,6 +123,8 @@
 DiscoHawk is part of the BizHawk project ( http://code.google.com/p/bizhawk ).
 
 BizHawk is a .net-based multi-system emulator brought to you by some of the rerecording emulator principals. We wrote our own cue parsing/generating code to be able to handle any kind of junk we threw at it. Instead of trapping it in the emulator, we liberated it in the form of this tool, to be useful in other environments.
+		
+MinisHawk is a fork of BizHawk developed for Minish Cap Speedrunning. This version of BizHawk is still in testing.
 
 To use, drag a disc (.cue, .iso, .ccd) into the top area. DiscoHawk will dump a newly cleaned up CCD file set to the same directory as the original disc image, and call it _hawked.
 

@@ -12,7 +12,7 @@ internal static class VersionInfo
 	public const string MainVersion = "2.4.2"; // Use numbers only or the new version notification won't work
 	public const string ReleaseDate = "May 17, 2020";
 	public const string HomePage = "http://tasvideos.org/BizHawk.html";
-	public static readonly bool DeveloperBuild = false;
+	public static readonly bool DeveloperBuild = true;
 
 	public static readonly string CustomBuildString;
 

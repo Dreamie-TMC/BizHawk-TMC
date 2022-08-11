@@ -9,7 +9,7 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>BizHawk.Build.Tool</RootNamespace>
     <AssemblyName>BizHawk.Build.Tool</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>
     <FileAlignment>512</FileAlignment>

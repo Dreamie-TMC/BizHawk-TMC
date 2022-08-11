@@ -46,7 +46,9 @@ namespace BizHawk.Common
 
 		protected WorkingDictionary(SerializationInfo info, StreamingContext context) : base(info, context) {}
 
+#if NETCOREAPP2_1_OR_GREATER
 		[property: MaybeNull]
+#endif
 		public new TValue this[TKey key]
 		{
 			get => TryGetValue(key, out var temp)

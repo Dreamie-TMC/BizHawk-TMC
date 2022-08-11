@@ -120,6 +120,7 @@ namespace BizHawk.Client.EmuHawk
 			if (newTool == null) return null;
 
 			if (newTool is Form form) form.Owner = _owner;
+			ApiInjector.UpdateApis(_apiProvider, newTool);
 			ServiceInjector.UpdateServices(_emulator.ServiceProvider, newTool);
 			SetBaseProperties(newTool);
 			var toolTypeName = typeof(T).ToString();
