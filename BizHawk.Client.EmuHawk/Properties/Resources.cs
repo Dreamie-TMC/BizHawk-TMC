@@ -20,16 +20,21 @@ namespace BizHawk.Client.EmuHawk.Properties
 
 		internal static readonly Bitmap A = ReadEmbeddedBitmap("A");
 		internal static readonly Bitmap B = ReadEmbeddedBitmap("B");
-		internal static readonly Bitmap Down = ReadEmbeddedBitmap("Down");
-		internal static readonly Bitmap Up = ReadEmbeddedBitmap("Up");
-		internal static readonly Bitmap Left = ReadEmbeddedBitmap("Left");
-		internal static readonly Bitmap Right = ReadEmbeddedBitmap("Right");
+		internal static readonly Bitmap DPad = ReadEmbeddedBitmap("DPad");
 		internal static readonly Bitmap L = ReadEmbeddedBitmap("L");
 		internal static readonly Bitmap R = ReadEmbeddedBitmap("R");
 		internal static readonly Bitmap Start = ReadEmbeddedBitmap("Start");
 		internal static readonly Bitmap Select = ReadEmbeddedBitmap("Select");
-		internal static readonly Bitmap Border = ReadEmbeddedBitmap("Border");
-		internal static readonly Bitmap Layout = ReadEmbeddedBitmap("Layout");
+		internal static readonly Bitmap APressed = ReadEmbeddedBitmap("A_Pressed");
+		internal static readonly Bitmap BPressed = ReadEmbeddedBitmap("B_Pressed");
+		internal static readonly Bitmap DownPressed = ReadEmbeddedBitmap("Down_Pressed");
+		internal static readonly Bitmap UpPressed = ReadEmbeddedBitmap("Up_Pressed");
+		internal static readonly Bitmap LeftPressed = ReadEmbeddedBitmap("Left_Pressed");
+		internal static readonly Bitmap RightPressed = ReadEmbeddedBitmap("Right_Pressed");
+		internal static readonly Bitmap LPressed = ReadEmbeddedBitmap("L_Pressed");
+		internal static readonly Bitmap RPressed = ReadEmbeddedBitmap("R_Pressed");
+		internal static readonly Bitmap StartPressed = ReadEmbeddedBitmap("Start_Pressed");
+		internal static readonly Bitmap SelectPressed = ReadEmbeddedBitmap("Select_Pressed");
 		internal static readonly Bitmap add = ReadEmbeddedBitmap("add");
 		internal static readonly Bitmap AddEdit = ReadEmbeddedBitmap("AddEdit");
 		internal static readonly Bitmap addWatch = ReadEmbeddedBitmapAt("images.addWatch.ico");

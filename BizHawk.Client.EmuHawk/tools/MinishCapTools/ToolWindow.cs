@@ -12,6 +12,7 @@ using BizHawk.Client.EmuHawk.Properties;
 using BizHawk.Common.NumberExtensions;
 using MinishCapTools.Data;
 using MinishCapTools.Elements;
+using MinishCapTools.Elements.Enums;
 using MinishCapTools.Elements.SplitWindow;
 using BackgroundChroma = MinishCapTools.Elements.BackgroundChroma;
 using InputViewer = MinishCapTools.Elements.InputViewer;
@@ -34,7 +35,7 @@ namespace MinishCapTools
         private AutoSplitter _splitter;
         private AutoSplitterSplitEditor _splitEditor;
 		private bool _isExited = false;
-		private bool _killSwitchOn = false;
+		private bool _saveAttempted = false;
 
         #region NativeImports
         [DllImport("user32.dll")]
@@ -74,9 +75,13 @@ namespace MinishCapTools
 
 		private void Close(object sender, FormClosingEventArgs e)
 		{
+			if (_saveAttempted) return;
+			
 			var result = MessageBox.Show(@"Would you like to save your changes?",
 				@"Save Settings", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
+			_saveAttempted = true;
+			
 			if (result != DialogResult.Yes) return;
 
 			try
@@ -98,6 +103,13 @@ namespace MinishCapTools
 
         private void InitializeSettings()
 		{
+			//This is extremely hacky but due to an exception getting localized resources we need to do this here...
+			this.Notes.Text = @"Notes:
+If you use the default image for the D-Pad, it will apply to each direction as well
+You cannot select a not pressed image for directions, or a pressed image for the D-Pad
+You cannot use default images only for directions, it must be set on the D-Pad control
+Per rules - each direction of the D-Pad must be able to be distinctly determined from the image";
+			
 			if (Settings == null)
 			{
 				Settings = new Settings();
@@ -109,49 +121,67 @@ namespace MinishCapTools
 			_splitter = new AutoSplitter();
 			_splitEditor = new AutoSplitterSplitEditor();
 
-			_modifiedSettings = Settings;
+			//If we fail to load settings, try again!
+			try
+			{
+				_modifiedSettings = Settings;
 
-			InputViewerEnable.Checked = Settings.InputViewer.Show;
-            InputBorder.Checked = Settings.InputViewer.InputBorder;
-            ChromaEnable.Checked = Settings.BackgroundChroma.Enabled;
-            EnablePadding.Checked = Settings.Padding.Enabled;
-            MovieMode.Checked = Settings.MovieMode;
-            EnableAutoSplitter.Checked = Settings.EnableAutoSplitter;
-            
-            ChromaSides.SelectedIndex = 0;
-            EnableSpecificChroma.Checked = Settings.BackgroundChroma.ShowOnLeft;
-            PaddingSides.SelectedIndex = 0;
-            PaddingSize.Text = $@"{Settings.Padding.LeftWidth}";
-            
-            var color = Color.FromArgb(int.Parse(Settings.BackgroundChroma.Color, NumberStyles.HexNumber));
-            ChromaColorEditor.Color = color;
-            ColorDisplay.BackColor = color;
+				InputViewerEnable.Checked = Settings.InputViewer.Show;
+				ChromaEnable.Checked = Settings.BackgroundChroma.Enabled;
+				EnablePadding.Checked = Settings.Padding.Enabled;
+				MovieMode.Checked = Settings.MovieMode;
+				EnableAutoSplitter.Checked = Settings.EnableAutoSplitter;
 
-			if (_initialized) RenderPadding();
-            
-            var directory = Directory.GetCurrentDirectory();
-            SelectSplitsLoader.InitialDirectory = directory;
-            ConfigSplitsLoader.InitialDirectory = directory;
-            ConfigSplitsSave.InitialDirectory = directory;
-            ConfigSplitsSave.Filter = @"Split Files (*.json)|*.json";
-        }
+				ChromaSides.SelectedIndex = 0;
+				EnableSpecificChroma.Checked = Settings.BackgroundChroma.ShowOnLeft;
+				PaddingSides.SelectedIndex = 0;
+				PaddingSize.Text = $@"{Settings.Padding.LeftWidth}";
+
+				var color = Color.FromArgb(int.Parse(Settings.BackgroundChroma.Color, NumberStyles.HexNumber));
+				ChromaColorEditor.Color = color;
+				ColorDisplay.BackColor = color;
+
+				if (_initialized) RenderPadding();
+
+				foreach (InputViewerButton button in Enum.GetValues(typeof(InputViewerButton)))
+				{
+					InputConfigButtons.Items.Add(button);
+				}
+
+				InputConfigButtons.SelectedIndex = 0;
+
+				UseCustomInputViewerImages.Checked = Settings.InputViewer.UseCustomButtonImages;
+			} 
+			catch (Exception)
+			{
+				Settings = new Settings();
+				Settings.RestoreDefaults();
+				InitializeSettings();
+			}
+
+			var directory = Directory.GetCurrentDirectory();
+			const string filter = @"Split Files (*.json)|*.json";
+			SelectSplitsLoader.InitialDirectory = directory;
+			ConfigSplitsLoader.InitialDirectory = directory;
+			ConfigSplitsSave.InitialDirectory = directory;
+			ConfigSplitsSave.Filter = filter;
+			ConfigSplitsLoader.Filter = filter;
+			SelectSplitsLoader.Filter = filter;
+
+			const string imageFilter = @"Image Files (*.jpg;*.jpeg;*.bmp;*.png)|*.jpg;*.jpeg;*.bmp;*.png";
+			PressedSelectImageDialogue.InitialDirectory = directory;
+			PressedSelectImageDialogue.Filter = imageFilter;
+			NotPressedSelectImageDialogue.InitialDirectory = directory;
+			NotPressedSelectImageDialogue.Filter = imageFilter;
+		}
         
 #region Windows Forms Actions
     #region General Settings
         private void InputViewerEnable_CheckedChanged(object sender, EventArgs e)
         {
 			_modifiedSettings.InputViewer.Show = 
-                InputBorder.Enabled = 
 					InputViewerEnable.Checked;
         }
-		
-		private void DontClick_CheckedChanged(object sender, EventArgs e)
-		{
-			if (_killSwitchOn) return;
-			_killSwitchOn = true;
-			MessageBox.Show(@"Looks like someone doesn't know how to read instructions...", @"=(", MessageBoxButtons.YesNo,
-				MessageBoxIcon.Error);
-		}
 
 		private void MovieMode_CheckedChanged(object sender, EventArgs e)
 		{
@@ -254,7 +284,7 @@ namespace MinishCapTools
             }
             catch
             {
-                MessageBox.Show(@"Failed to save settings! Please try again.", @"Settings Failed", MessageBoxButtons.OK,
+                MessageBox.Show(@"Failed to save settings! Please try again.", @"Settings Failed To Save", MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
             }
         }
@@ -278,12 +308,36 @@ namespace MinishCapTools
 This action cannot be undone!",
 				@"Update Default Settings", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
                 
-			if (result != DialogResult.Yes) return;
-
-			Settings.DefaultSettings = _modifiedSettings;
+			if (result != DialogResult.Yes) return;            
 			
-			MessageBox.Show(@"Default settings saved successfully!", @"Settings Saved", MessageBoxButtons.OK,
-				MessageBoxIcon.Information);
+			result = MessageBox.Show(@"Would you like to save your settings as well? This cannot be undone!",
+				@"Save Settings", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+			if (result == DialogResult.Yes)
+			{
+
+				try
+				{
+					_modifiedSettings.DefaultSettings = new DefaultSettings(_modifiedSettings);
+					Settings = _modifiedSettings;
+					MessageBox.Show(@"Settings and defaults saved successfully!", @"Settings Saved", MessageBoxButtons.OK,
+						MessageBoxIcon.Information);
+				}
+				catch
+				{
+					MessageBox.Show(@"Failed to save settings! Please try again.", @"Settings Failed To Save", 
+						MessageBoxButtons.OK,
+						MessageBoxIcon.Error);
+				}
+			}
+			else
+			{
+
+				Settings.DefaultSettings = new DefaultSettings(_modifiedSettings);
+
+				MessageBox.Show(@"Default settings saved successfully!", @"Settings Saved", MessageBoxButtons.OK,
+					MessageBoxIcon.Information);
+			}
 		}
             
         private void UndoChanges_Click(object sender, EventArgs e)
@@ -771,15 +825,129 @@ This action cannot be undone!",
     #endregion
 
     #region Input Config
-        private void InputBorder_CheckedChanged(object sender, EventArgs e)
-        {
-			_modifiedSettings.InputViewer.InputBorder = InputBorder.Checked;
-        }
-        
-        private void InputViewerRestorePos_Click(object sender, EventArgs e)
-        {
-			_modifiedSettings.InputViewer.RestoreDefaultPosition();
-        }
+	private void UseCustomInputViewerImages_CheckedChanged(object sender, EventArgs e)
+		{
+			_modifiedSettings.InputViewer.UseCustomButtonImages = UseCustomInputViewerImages.Checked;
+		}
+		
+		private void InputConfigButtons_SelectedIndexChanged(object sender, EventArgs e)
+		{
+			UnlockButton.Checked = false;
+			var item = (InputViewerButton)InputConfigButtons.SelectedIndex;
+			switch (item)
+			{
+				case InputViewerButton.A:
+				case InputViewerButton.B:
+				case InputViewerButton.L:
+				case InputViewerButton.R:
+				case InputViewerButton.Start:
+				case InputViewerButton.Select:
+					SelectImageForPressed.Enabled = true;
+					SelectImageForNotPressed.Enabled = true;
+					
+					UseDefaultImagesForButton.Enabled = true;
+
+					var button = _modifiedSettings.InputViewer.ButtonConfiguration[(short)item];
+					UseDefaultImagesForButton.Checked = button.UseDefaultVersionOfButton;
+
+					PressedPathDisplay.Text = !string.IsNullOrEmpty(button.ButtonPressedImagePath) ? button.ButtonPressedImagePath : @"Click the button on the right to select an image";
+					NotPressedPathDisplay.Text = !string.IsNullOrEmpty(button.ButtonNotPressedImagePath) ? button.ButtonNotPressedImagePath : @"Click the button on the right to select an image";
+
+					ButtonX.Text = $"{button.X}";
+					ButtonY.Text = $"{button.Y}";
+					break;
+				case InputViewerButton.DPad:
+					SelectImageForPressed.Enabled = false;
+					SelectImageForNotPressed.Enabled = true;
+					
+					UseDefaultImagesForButton.Enabled = true;
+
+					button = _modifiedSettings.InputViewer.ButtonConfiguration[(short)item];
+					UseDefaultImagesForButton.Checked = button.UseDefaultVersionOfButton;
+
+					PressedPathDisplay.Text = @"Cannot select a pressed image for the current button";
+					NotPressedPathDisplay.Text = !string.IsNullOrEmpty(button.ButtonNotPressedImagePath) ? button.ButtonNotPressedImagePath : @"Click the button on the right to select an image";
+
+					ButtonX.Text = $"{button.X}";
+					ButtonY.Text = $"{button.Y}";
+					break;
+				case InputViewerButton.Up:
+				case InputViewerButton.Down:
+				case InputViewerButton.Left:
+				case InputViewerButton.Right:
+					SelectImageForPressed.Enabled = true;
+					SelectImageForNotPressed.Enabled = false;
+					
+					UseDefaultImagesForButton.Enabled = false;
+
+					button = _modifiedSettings.InputViewer.ButtonConfiguration[(short)item];
+					UseDefaultImagesForButton.Checked = button.UseDefaultVersionOfButton;
+
+					PressedPathDisplay.Text = !string.IsNullOrEmpty(button.ButtonPressedImagePath) ? button.ButtonPressedImagePath : @"Click the button on the right to select an image";
+					NotPressedPathDisplay.Text = @"Cannot select a not pressed image for the current button";
+
+					ButtonX.Text = $"{button.X}";
+					ButtonY.Text = $"{button.Y}";
+					break;
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+		}
+		
+		private void SaveButtonPosition_Click(object sender, EventArgs e)
+		{
+			if (!int.TryParse(ButtonX.Text, out var xPos) || !int.TryParse(ButtonY.Text, out var yPos))
+			{
+				MessageBox.Show(@"X and Y position must be integers!", @"Failed to Save Button Position", 
+					MessageBoxButtons.OK,
+					MessageBoxIcon.Error);
+				return;
+			}
+
+			_modifiedSettings.InputViewer.ButtonConfiguration[InputConfigButtons.SelectedIndex].X = xPos;
+			_modifiedSettings.InputViewer.ButtonConfiguration[InputConfigButtons.SelectedIndex].Y = yPos;
+		}
+
+		private void SelectImageForNotPressed_Click(object sender, EventArgs e)
+		{
+			var result = NotPressedSelectImageDialogue.ShowHawkDialog();
+			
+			if (result != DialogResult.OK) return;
+            
+			var item = (InputViewerButton)InputConfigButtons.SelectedIndex;
+			_modifiedSettings.InputViewer.ButtonConfiguration[(short)item].ButtonNotPressedImagePath = NotPressedSelectImageDialogue.FileName;
+			NotPressedPathDisplay.Text = NotPressedSelectImageDialogue.FileName;
+		}
+
+		private void SelectImageForPressed_Click(object sender, EventArgs e)
+		{
+			var result = PressedSelectImageDialogue.ShowHawkDialog();
+			
+			if (result != DialogResult.OK) return;
+            
+			var item = (InputViewerButton)InputConfigButtons.SelectedIndex;
+			_modifiedSettings.InputViewer.ButtonConfiguration[(short)item].ButtonPressedImagePath = PressedSelectImageDialogue.FileName;
+			PressedPathDisplay.Text = PressedSelectImageDialogue.FileName;
+		}
+
+		private void UseDefaultImagesForButton_CheckedChanged(object sender, EventArgs e)
+		{
+			var item = (InputViewerButton)InputConfigButtons.SelectedIndex;
+			_modifiedSettings.InputViewer.ButtonConfiguration[(short)item].UseDefaultVersionOfButton = UseDefaultImagesForButton.Checked;
+		}
+
+		private void UnlockButton_CheckedChanged(object sender, EventArgs e)
+		{
+			if (!UnlockButton.Checked)
+			{
+				_inputViewer.UnlockButton = false;
+			}
+			else
+			{
+				_inputViewer.UnlockedButtonId = (InputViewerButton)InputConfigButtons.SelectedIndex;
+				_inputViewer.UnlockButton = true;
+			}
+		}
     #endregion
 #endregion
 
@@ -795,12 +963,6 @@ This action cannot be undone!",
 				InitializeSettings();
 				RenderPadding();
 				_initialized = true;
-			}
-
-			if (_killSwitchOn && MemoryAccessor.LoadTextboxValues(Memory)["Textbox"] != 0)
-			{
-				Environment.Exit(255);
-				return;
 			}
 
 			if (_modifiedSettings.MovieMode && Movie.IsLoaded() && Emu.FrameCount() < Movie.Length())
@@ -947,48 +1109,23 @@ private void InitializeComponent()
 	this.button13 = new System.Windows.Forms.Button();
 	this.label9 = new System.Windows.Forms.Label();
 	this.InputConfig = new System.Windows.Forms.TabPage();
-	this.checkBox2 = new System.Windows.Forms.CheckBox();
-	this.label48 = new System.Windows.Forms.Label();
-	this.label37 = new System.Windows.Forms.Label();
-	this.label38 = new System.Windows.Forms.Label();
-	this.label39 = new System.Windows.Forms.Label();
-	this.label40 = new System.Windows.Forms.Label();
-	this.label41 = new System.Windows.Forms.Label();
-	this.label42 = new System.Windows.Forms.Label();
-	this.label43 = new System.Windows.Forms.Label();
-	this.label44 = new System.Windows.Forms.Label();
-	this.label45 = new System.Windows.Forms.Label();
-	this.label46 = new System.Windows.Forms.Label();
-	this.label47 = new System.Windows.Forms.Label();
-	this.label36 = new System.Windows.Forms.Label();
-	this.label35 = new System.Windows.Forms.Label();
-	this.label34 = new System.Windows.Forms.Label();
-	this.label33 = new System.Windows.Forms.Label();
-	this.label32 = new System.Windows.Forms.Label();
-	this.label31 = new System.Windows.Forms.Label();
-	this.label30 = new System.Windows.Forms.Label();
-	this.label29 = new System.Windows.Forms.Label();
-	this.label28 = new System.Windows.Forms.Label();
-	this.label27 = new System.Windows.Forms.Label();
-	this.label26 = new System.Windows.Forms.Label();
-	this.label21 = new System.Windows.Forms.Label();
-	this.label20 = new System.Windows.Forms.Label();
-	this.label19 = new System.Windows.Forms.Label();
-	this.label18 = new System.Windows.Forms.Label();
-	this.label17 = new System.Windows.Forms.Label();
+	this.SaveButtonPosition = new System.Windows.Forms.Button();
+	this.Notes = new System.Windows.Forms.Label();
+	this.UseDefaultImagesForButton = new System.Windows.Forms.CheckBox();
+	this.SelectImageForPressed = new System.Windows.Forms.Button();
+	this.PressedPathDisplay = new System.Windows.Forms.TextBox();
 	this.label16 = new System.Windows.Forms.Label();
+	this.SelectImageForNotPressed = new System.Windows.Forms.Button();
+	this.NotPressedPathDisplay = new System.Windows.Forms.TextBox();
 	this.label15 = new System.Windows.Forms.Label();
+	this.UnlockButton = new System.Windows.Forms.CheckBox();
+	this.ButtonY = new System.Windows.Forms.TextBox();
 	this.label14 = new System.Windows.Forms.Label();
+	this.ButtonX = new System.Windows.Forms.TextBox();
 	this.label13 = new System.Windows.Forms.Label();
+	this.InputConfigButtons = new System.Windows.Forms.ComboBox();
 	this.label11 = new System.Windows.Forms.Label();
-	this.label25 = new System.Windows.Forms.Label();
-	this.label24 = new System.Windows.Forms.Label();
-	this.label23 = new System.Windows.Forms.Label();
-	this.label22 = new System.Windows.Forms.Label();
-	this.label3 = new System.Windows.Forms.Label();
-	this.checkBox1 = new System.Windows.Forms.CheckBox();
-	this.InputViewerRestorePos = new System.Windows.Forms.Button();
-	this.InputBorder = new System.Windows.Forms.CheckBox();
+	this.UseCustomInputViewerImages = new System.Windows.Forms.CheckBox();
 	this.SplitterConfig = new System.Windows.Forms.TabPage();
 	this.Splits = new System.Windows.Forms.ListView();
 	this.header1 = new System.Windows.Forms.ColumnHeader();
@@ -1044,6 +1181,9 @@ private void InitializeComponent()
 	this.Save = new System.Windows.Forms.Button();
 	this.EnableAutoSplitter = new System.Windows.Forms.CheckBox();
 	this.TabControl = new System.Windows.Forms.TabControl();
+	this.label3 = new System.Windows.Forms.Label();
+	this.NotPressedSelectImageDialogue = new System.Windows.Forms.OpenFileDialog();
+	this.PressedSelectImageDialogue = new System.Windows.Forms.OpenFileDialog();
 	this.tabPage7.SuspendLayout();
 	this.InputConfig.SuspendLayout();
 	this.SplitterConfig.SuspendLayout();
@@ -1244,48 +1384,23 @@ private void InitializeComponent()
 	// InputConfig
 	// 
 	this.InputConfig.BackColor = System.Drawing.Color.White;
-	this.InputConfig.Controls.Add(this.checkBox2);
-	this.InputConfig.Controls.Add(this.label48);
-	this.InputConfig.Controls.Add(this.label37);
-	this.InputConfig.Controls.Add(this.label38);
-	this.InputConfig.Controls.Add(this.label39);
-	this.InputConfig.Controls.Add(this.label40);
-	this.InputConfig.Controls.Add(this.label41);
-	this.InputConfig.Controls.Add(this.label42);
-	this.InputConfig.Controls.Add(this.label43);
-	this.InputConfig.Controls.Add(this.label44);
-	this.InputConfig.Controls.Add(this.label45);
-	this.InputConfig.Controls.Add(this.label46);
-	this.InputConfig.Controls.Add(this.label47);
-	this.InputConfig.Controls.Add(this.label36);
-	this.InputConfig.Controls.Add(this.label35);
-	this.InputConfig.Controls.Add(this.label34);
-	this.InputConfig.Controls.Add(this.label33);
-	this.InputConfig.Controls.Add(this.label32);
-	this.InputConfig.Controls.Add(this.label31);
-	this.InputConfig.Controls.Add(this.label30);
-	this.InputConfig.Controls.Add(this.label29);
-	this.InputConfig.Controls.Add(this.label28);
-	this.InputConfig.Controls.Add(this.label27);
-	this.InputConfig.Controls.Add(this.label26);
-	this.InputConfig.Controls.Add(this.label21);
-	this.InputConfig.Controls.Add(this.label20);
-	this.InputConfig.Controls.Add(this.label19);
-	this.InputConfig.Controls.Add(this.label18);
-	this.InputConfig.Controls.Add(this.label17);
+	this.InputConfig.Controls.Add(this.SaveButtonPosition);
+	this.InputConfig.Controls.Add(this.Notes);
+	this.InputConfig.Controls.Add(this.UseDefaultImagesForButton);
+	this.InputConfig.Controls.Add(this.SelectImageForPressed);
+	this.InputConfig.Controls.Add(this.PressedPathDisplay);
 	this.InputConfig.Controls.Add(this.label16);
+	this.InputConfig.Controls.Add(this.SelectImageForNotPressed);
+	this.InputConfig.Controls.Add(this.NotPressedPathDisplay);
 	this.InputConfig.Controls.Add(this.label15);
+	this.InputConfig.Controls.Add(this.UnlockButton);
+	this.InputConfig.Controls.Add(this.ButtonY);
 	this.InputConfig.Controls.Add(this.label14);
+	this.InputConfig.Controls.Add(this.ButtonX);
 	this.InputConfig.Controls.Add(this.label13);
+	this.InputConfig.Controls.Add(this.InputConfigButtons);
 	this.InputConfig.Controls.Add(this.label11);
-	this.InputConfig.Controls.Add(this.label25);
-	this.InputConfig.Controls.Add(this.label24);
-	this.InputConfig.Controls.Add(this.label23);
-	this.InputConfig.Controls.Add(this.label22);
-	this.InputConfig.Controls.Add(this.label3);
-	this.InputConfig.Controls.Add(this.checkBox1);
-	this.InputConfig.Controls.Add(this.InputViewerRestorePos);
-	this.InputConfig.Controls.Add(this.InputBorder);
+	this.InputConfig.Controls.Add(this.UseCustomInputViewerImages);
 	this.InputConfig.Location = new System.Drawing.Point(4, 22);
 	this.InputConfig.Name = "InputConfig";
 	this.InputConfig.Padding = new System.Windows.Forms.Padding(3);
@@ -1293,463 +1408,165 @@ private void InitializeComponent()
 	this.InputConfig.TabIndex = 3;
 	this.InputConfig.Text = "Input Config";
 	// 
-	// checkBox2
+	// SaveButtonPosition
 	// 
-	this.checkBox2.CheckAlign = System.Drawing.ContentAlignment.MiddleCenter;
-	this.checkBox2.Location = new System.Drawing.Point(487, 56);
-	this.checkBox2.Name = "checkBox2";
-	this.checkBox2.Size = new System.Drawing.Size(106, 21);
-	this.checkBox2.TabIndex = 81;
-	this.checkBox2.UseVisualStyleBackColor = true;
+	this.SaveButtonPosition.Location = new System.Drawing.Point(493, 33);
+	this.SaveButtonPosition.Name = "SaveButtonPosition";
+	this.SaveButtonPosition.Size = new System.Drawing.Size(98, 23);
+	this.SaveButtonPosition.TabIndex = 49;
+	this.SaveButtonPosition.Text = "Save X-Y Pos";
+	this.SaveButtonPosition.UseVisualStyleBackColor = true;
+	this.SaveButtonPosition.Click += new System.EventHandler(this.SaveButtonPosition_Click);
 	// 
-	// label48
+	// Notes
 	// 
-	this.label48.BackColor = System.Drawing.Color.Transparent;
-	this.label48.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label48.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label48.Location = new System.Drawing.Point(486, 55);
-	this.label48.Name = "label48";
-	this.label48.Size = new System.Drawing.Size(108, 23);
-	this.label48.TabIndex = 80;
-	this.label48.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+	this.Notes.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+	this.Notes.Location = new System.Drawing.Point(3, 217);
+	this.Notes.Name = "Notes";
+	this.Notes.Size = new System.Drawing.Size(585, 102);
+	this.Notes.TabIndex = 47;
+	this.Notes.Text = "Filler";
+	this.Notes.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 	// 
-	// label37
+	// UseDefaultImagesForButton
 	// 
-	this.label37.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label37.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label37.Location = new System.Drawing.Point(275, 274);
-	this.label37.Name = "label37";
-	this.label37.Size = new System.Drawing.Size(212, 23);
-	this.label37.TabIndex = 79;
-	this.label37.Text = "No Image Selected";
-	this.label37.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+	this.UseDefaultImagesForButton.Location = new System.Drawing.Point(6, 171);
+	this.UseDefaultImagesForButton.Name = "UseDefaultImagesForButton";
+	this.UseDefaultImagesForButton.Size = new System.Drawing.Size(418, 24);
+	this.UseDefaultImagesForButton.TabIndex = 45;
+	this.UseDefaultImagesForButton.Text = "Use Default Images For This Button";
+	this.UseDefaultImagesForButton.UseVisualStyleBackColor = true;
+	this.UseDefaultImagesForButton.CheckedChanged += new System.EventHandler(this.UseDefaultImagesForButton_CheckedChanged);
 	// 
-	// label38
+	// SelectImageForPressed
 	// 
-	this.label38.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label38.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label38.Location = new System.Drawing.Point(275, 252);
-	this.label38.Name = "label38";
-	this.label38.Size = new System.Drawing.Size(212, 23);
-	this.label38.TabIndex = 78;
-	this.label38.Text = "Not Pressed Image Path";
-	this.label38.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+	this.SelectImageForPressed.Enabled = false;
+	this.SelectImageForPressed.Location = new System.Drawing.Point(430, 141);
+	this.SelectImageForPressed.Name = "SelectImageForPressed";
+	this.SelectImageForPressed.Size = new System.Drawing.Size(164, 23);
+	this.SelectImageForPressed.TabIndex = 44;
+	this.SelectImageForPressed.Text = "Select Image";
+	this.SelectImageForPressed.UseVisualStyleBackColor = true;
+	this.SelectImageForPressed.Click += new System.EventHandler(this.SelectImageForPressed_Click);
 	// 
-	// label39
+	// PressedPathDisplay
 	// 
-	this.label39.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label39.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label39.Location = new System.Drawing.Point(275, 230);
-	this.label39.Name = "label39";
-	this.label39.Size = new System.Drawing.Size(212, 23);
-	this.label39.TabIndex = 77;
-	this.label39.Text = "Not Pressed Image Path";
-	this.label39.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-	// 
-	// label40
-	// 
-	this.label40.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label40.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label40.Location = new System.Drawing.Point(275, 208);
-	this.label40.Name = "label40";
-	this.label40.Size = new System.Drawing.Size(212, 23);
-	this.label40.TabIndex = 76;
-	this.label40.Text = "Not Pressed Image Path";
-	this.label40.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-	// 
-	// label41
-	// 
-	this.label41.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label41.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label41.Location = new System.Drawing.Point(275, 186);
-	this.label41.Name = "label41";
-	this.label41.Size = new System.Drawing.Size(212, 23);
-	this.label41.TabIndex = 75;
-	this.label41.Text = "Not Pressed Image Path";
-	this.label41.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-	// 
-	// label42
-	// 
-	this.label42.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label42.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label42.Location = new System.Drawing.Point(275, 165);
-	this.label42.Name = "label42";
-	this.label42.Size = new System.Drawing.Size(212, 23);
-	this.label42.TabIndex = 74;
-	this.label42.Text = "Not Pressed Image Path";
-	this.label42.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-	// 
-	// label43
-	// 
-	this.label43.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label43.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label43.Location = new System.Drawing.Point(275, 143);
-	this.label43.Name = "label43";
-	this.label43.Size = new System.Drawing.Size(212, 23);
-	this.label43.TabIndex = 73;
-	this.label43.Text = "Not Pressed Image Path";
-	this.label43.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-	// 
-	// label44
-	// 
-	this.label44.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label44.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label44.Location = new System.Drawing.Point(275, 121);
-	this.label44.Name = "label44";
-	this.label44.Size = new System.Drawing.Size(212, 23);
-	this.label44.TabIndex = 72;
-	this.label44.Text = "Not Pressed Image Path";
-	this.label44.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-	// 
-	// label45
-	// 
-	this.label45.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label45.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label45.Location = new System.Drawing.Point(275, 99);
-	this.label45.Name = "label45";
-	this.label45.Size = new System.Drawing.Size(212, 23);
-	this.label45.TabIndex = 71;
-	this.label45.Text = "Not Pressed Image Path";
-	this.label45.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-	// 
-	// label46
-	// 
-	this.label46.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label46.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label46.Location = new System.Drawing.Point(275, 77);
-	this.label46.Name = "label46";
-	this.label46.Size = new System.Drawing.Size(212, 23);
-	this.label46.TabIndex = 70;
-	this.label46.Text = "Not Pressed Image Path";
-	this.label46.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-	// 
-	// label47
-	// 
-	this.label47.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label47.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label47.Location = new System.Drawing.Point(275, 55);
-	this.label47.Name = "label47";
-	this.label47.Size = new System.Drawing.Size(212, 23);
-	this.label47.TabIndex = 69;
-	this.label47.Text = "Not Pressed Image Path";
-	this.label47.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-	// 
-	// label36
-	// 
-	this.label36.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label36.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label36.Location = new System.Drawing.Point(64, 274);
-	this.label36.Name = "label36";
-	this.label36.Size = new System.Drawing.Size(212, 23);
-	this.label36.TabIndex = 67;
-	this.label36.Text = "Not Pressed Image Path";
-	this.label36.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-	// 
-	// label35
-	// 
-	this.label35.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label35.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label35.Location = new System.Drawing.Point(64, 252);
-	this.label35.Name = "label35";
-	this.label35.Size = new System.Drawing.Size(212, 23);
-	this.label35.TabIndex = 66;
-	this.label35.Text = "Not Pressed Image Path";
-	this.label35.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-	// 
-	// label34
-	// 
-	this.label34.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label34.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label34.Location = new System.Drawing.Point(64, 230);
-	this.label34.Name = "label34";
-	this.label34.Size = new System.Drawing.Size(212, 23);
-	this.label34.TabIndex = 65;
-	this.label34.Text = "Not Pressed Image Path";
-	this.label34.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-	// 
-	// label33
-	// 
-	this.label33.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label33.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label33.Location = new System.Drawing.Point(64, 208);
-	this.label33.Name = "label33";
-	this.label33.Size = new System.Drawing.Size(212, 23);
-	this.label33.TabIndex = 64;
-	this.label33.Text = "Not Pressed Image Path";
-	this.label33.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-	// 
-	// label32
-	// 
-	this.label32.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label32.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label32.Location = new System.Drawing.Point(64, 186);
-	this.label32.Name = "label32";
-	this.label32.Size = new System.Drawing.Size(212, 23);
-	this.label32.TabIndex = 63;
-	this.label32.Text = "Not Pressed Image Path";
-	this.label32.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-	// 
-	// label31
-	// 
-	this.label31.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label31.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label31.Location = new System.Drawing.Point(64, 165);
-	this.label31.Name = "label31";
-	this.label31.Size = new System.Drawing.Size(212, 23);
-	this.label31.TabIndex = 62;
-	this.label31.Text = "Not Pressed Image Path";
-	this.label31.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-	// 
-	// label30
-	// 
-	this.label30.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label30.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label30.Location = new System.Drawing.Point(64, 143);
-	this.label30.Name = "label30";
-	this.label30.Size = new System.Drawing.Size(212, 23);
-	this.label30.TabIndex = 61;
-	this.label30.Text = "Not Pressed Image Path";
-	this.label30.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-	// 
-	// label29
-	// 
-	this.label29.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label29.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label29.Location = new System.Drawing.Point(64, 121);
-	this.label29.Name = "label29";
-	this.label29.Size = new System.Drawing.Size(212, 23);
-	this.label29.TabIndex = 60;
-	this.label29.Text = "Not Pressed Image Path";
-	this.label29.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-	// 
-	// label28
-	// 
-	this.label28.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label28.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label28.Location = new System.Drawing.Point(64, 99);
-	this.label28.Name = "label28";
-	this.label28.Size = new System.Drawing.Size(212, 23);
-	this.label28.TabIndex = 59;
-	this.label28.Text = "Not Pressed Image Path";
-	this.label28.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-	// 
-	// label27
-	// 
-	this.label27.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label27.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label27.Location = new System.Drawing.Point(64, 77);
-	this.label27.Name = "label27";
-	this.label27.Size = new System.Drawing.Size(212, 23);
-	this.label27.TabIndex = 58;
-	this.label27.Text = "Not Pressed Image Path";
-	this.label27.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-	// 
-	// label26
-	// 
-	this.label26.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label26.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label26.Location = new System.Drawing.Point(64, 55);
-	this.label26.Name = "label26";
-	this.label26.Size = new System.Drawing.Size(212, 23);
-	this.label26.TabIndex = 57;
-	this.label26.Text = "Not Pressed Image Path";
-	this.label26.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-	// 
-	// label21
-	// 
-	this.label21.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label21.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label21.Location = new System.Drawing.Point(6, 274);
-	this.label21.Name = "label21";
-	this.label21.Size = new System.Drawing.Size(59, 23);
-	this.label21.TabIndex = 56;
-	this.label21.Text = "Right";
-	this.label21.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-	// 
-	// label20
-	// 
-	this.label20.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label20.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label20.Location = new System.Drawing.Point(6, 252);
-	this.label20.Name = "label20";
-	this.label20.Size = new System.Drawing.Size(59, 23);
-	this.label20.TabIndex = 55;
-	this.label20.Text = "Left";
-	this.label20.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-	// 
-	// label19
-	// 
-	this.label19.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label19.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label19.Location = new System.Drawing.Point(6, 230);
-	this.label19.Name = "label19";
-	this.label19.Size = new System.Drawing.Size(59, 23);
-	this.label19.TabIndex = 54;
-	this.label19.Text = "Down";
-	this.label19.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-	// 
-	// label18
-	// 
-	this.label18.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label18.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label18.Location = new System.Drawing.Point(6, 208);
-	this.label18.Name = "label18";
-	this.label18.Size = new System.Drawing.Size(59, 23);
-	this.label18.TabIndex = 53;
-	this.label18.Text = "Up";
-	this.label18.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-	// 
-	// label17
-	// 
-	this.label17.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label17.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label17.Location = new System.Drawing.Point(6, 186);
-	this.label17.Name = "label17";
-	this.label17.Size = new System.Drawing.Size(59, 23);
-	this.label17.TabIndex = 52;
-	this.label17.Text = "D-Pad";
-	this.label17.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+	this.PressedPathDisplay.Location = new System.Drawing.Point(6, 143);
+	this.PressedPathDisplay.Name = "PressedPathDisplay";
+	this.PressedPathDisplay.ReadOnly = true;
+	this.PressedPathDisplay.Size = new System.Drawing.Size(418, 20);
+	this.PressedPathDisplay.TabIndex = 43;
+	this.PressedPathDisplay.Text = "Click the button on the right to select an image";
 	// 
 	// label16
 	// 
-	this.label16.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label16.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label16.Location = new System.Drawing.Point(6, 165);
+	this.label16.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+	this.label16.Location = new System.Drawing.Point(6, 117);
 	this.label16.Name = "label16";
-	this.label16.Size = new System.Drawing.Size(59, 23);
-	this.label16.TabIndex = 51;
-	this.label16.Text = "Select";
+	this.label16.Size = new System.Drawing.Size(588, 23);
+	this.label16.TabIndex = 42;
+	this.label16.Text = "Button Pressed Custom Image Path:";
 	this.label16.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+	// 
+	// SelectImageForNotPressed
+	// 
+	this.SelectImageForNotPressed.Enabled = false;
+	this.SelectImageForNotPressed.Location = new System.Drawing.Point(430, 91);
+	this.SelectImageForNotPressed.Name = "SelectImageForNotPressed";
+	this.SelectImageForNotPressed.Size = new System.Drawing.Size(164, 23);
+	this.SelectImageForNotPressed.TabIndex = 41;
+	this.SelectImageForNotPressed.Text = "Select Image";
+	this.SelectImageForNotPressed.UseVisualStyleBackColor = true;
+	this.SelectImageForNotPressed.Click += new System.EventHandler(this.SelectImageForNotPressed_Click);
+	// 
+	// NotPressedPathDisplay
+	// 
+	this.NotPressedPathDisplay.Location = new System.Drawing.Point(6, 93);
+	this.NotPressedPathDisplay.Name = "NotPressedPathDisplay";
+	this.NotPressedPathDisplay.ReadOnly = true;
+	this.NotPressedPathDisplay.Size = new System.Drawing.Size(418, 20);
+	this.NotPressedPathDisplay.TabIndex = 40;
+	this.NotPressedPathDisplay.Text = "Click the button on the right to select an image";
 	// 
 	// label15
 	// 
-	this.label15.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label15.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label15.Location = new System.Drawing.Point(6, 143);
+	this.label15.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+	this.label15.Location = new System.Drawing.Point(6, 67);
 	this.label15.Name = "label15";
-	this.label15.Size = new System.Drawing.Size(59, 23);
-	this.label15.TabIndex = 50;
-	this.label15.Text = "Start";
+	this.label15.Size = new System.Drawing.Size(588, 23);
+	this.label15.TabIndex = 39;
+	this.label15.Text = "Button Not Pressed Custom Image Path:";
 	this.label15.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+	// 
+	// UnlockButton
+	// 
+	this.UnlockButton.Location = new System.Drawing.Point(430, 171);
+	this.UnlockButton.Name = "UnlockButton";
+	this.UnlockButton.Size = new System.Drawing.Size(161, 24);
+	this.UnlockButton.TabIndex = 38;
+	this.UnlockButton.Text = "Unlock Button Image";
+	this.UnlockButton.UseVisualStyleBackColor = true;
+	this.UnlockButton.CheckedChanged += new System.EventHandler(this.UnlockButton_CheckedChanged);
+	// 
+	// ButtonY
+	// 
+	this.ButtonY.Location = new System.Drawing.Point(430, 35);
+	this.ButtonY.Name = "ButtonY";
+	this.ButtonY.Size = new System.Drawing.Size(57, 20);
+	this.ButtonY.TabIndex = 37;
 	// 
 	// label14
 	// 
-	this.label14.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label14.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label14.Location = new System.Drawing.Point(6, 121);
+	this.label14.Location = new System.Drawing.Point(333, 33);
 	this.label14.Name = "label14";
-	this.label14.Size = new System.Drawing.Size(59, 23);
-	this.label14.TabIndex = 49;
-	this.label14.Text = "R";
+	this.label14.Size = new System.Drawing.Size(91, 23);
+	this.label14.TabIndex = 36;
+	this.label14.Text = "Button Y Position:";
 	this.label14.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+	// 
+	// ButtonX
+	// 
+	this.ButtonX.Location = new System.Drawing.Point(270, 35);
+	this.ButtonX.Name = "ButtonX";
+	this.ButtonX.Size = new System.Drawing.Size(57, 20);
+	this.ButtonX.TabIndex = 35;
 	// 
 	// label13
 	// 
-	this.label13.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label13.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label13.Location = new System.Drawing.Point(6, 99);
+	this.label13.Location = new System.Drawing.Point(173, 33);
 	this.label13.Name = "label13";
-	this.label13.Size = new System.Drawing.Size(59, 23);
-	this.label13.TabIndex = 48;
-	this.label13.Text = "L";
+	this.label13.Size = new System.Drawing.Size(91, 23);
+	this.label13.TabIndex = 34;
+	this.label13.Text = "Button X Position:";
 	this.label13.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+	// 
+	// InputConfigButtons
+	// 
+	this.InputConfigButtons.FormattingEnabled = true;
+	this.InputConfigButtons.Location = new System.Drawing.Point(58, 35);
+	this.InputConfigButtons.Name = "InputConfigButtons";
+	this.InputConfigButtons.Size = new System.Drawing.Size(109, 21);
+	this.InputConfigButtons.TabIndex = 33;
+	this.InputConfigButtons.SelectedIndexChanged += new System.EventHandler(this.InputConfigButtons_SelectedIndexChanged);
 	// 
 	// label11
 	// 
-	this.label11.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label11.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label11.Location = new System.Drawing.Point(6, 77);
+	this.label11.Location = new System.Drawing.Point(6, 33);
 	this.label11.Name = "label11";
-	this.label11.Size = new System.Drawing.Size(59, 23);
-	this.label11.TabIndex = 47;
-	this.label11.Text = "B";
+	this.label11.Size = new System.Drawing.Size(46, 23);
+	this.label11.TabIndex = 32;
+	this.label11.Text = "Button:";
 	this.label11.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 	// 
-	// label25
+	// UseCustomInputViewerImages
 	// 
-	this.label25.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label25.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label25.Location = new System.Drawing.Point(6, 33);
-	this.label25.Name = "label25";
-	this.label25.Size = new System.Drawing.Size(59, 23);
-	this.label25.TabIndex = 46;
-	this.label25.Text = "Button";
-	this.label25.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-	// 
-	// label24
-	// 
-	this.label24.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label24.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label24.Location = new System.Drawing.Point(486, 33);
-	this.label24.Name = "label24";
-	this.label24.Size = new System.Drawing.Size(108, 23);
-	this.label24.TabIndex = 45;
-	this.label24.Text = "Unlocked";
-	this.label24.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-	// 
-	// label23
-	// 
-	this.label23.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label23.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label23.Location = new System.Drawing.Point(275, 33);
-	this.label23.Name = "label23";
-	this.label23.Size = new System.Drawing.Size(212, 23);
-	this.label23.TabIndex = 44;
-	this.label23.Text = "Pressed Image Path";
-	this.label23.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-	// 
-	// label22
-	// 
-	this.label22.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label22.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label22.Location = new System.Drawing.Point(64, 33);
-	this.label22.Name = "label22";
-	this.label22.Size = new System.Drawing.Size(212, 23);
-	this.label22.TabIndex = 43;
-	this.label22.Text = "Not Pressed Image Path";
-	this.label22.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-	// 
-	// label3
-	// 
-	this.label3.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-	this.label3.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-	this.label3.Location = new System.Drawing.Point(6, 55);
-	this.label3.Name = "label3";
-	this.label3.Size = new System.Drawing.Size(59, 23);
-	this.label3.TabIndex = 32;
-	this.label3.Text = "A";
-	this.label3.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-	// 
-	// checkBox1
-	// 
-	this.checkBox1.Enabled = false;
-	this.checkBox1.Location = new System.Drawing.Point(173, 6);
-	this.checkBox1.Name = "checkBox1";
-	this.checkBox1.Size = new System.Drawing.Size(211, 24);
-	this.checkBox1.TabIndex = 26;
-	this.checkBox1.Text = "Use Custom Images For Input Viewer";
-	this.checkBox1.UseVisualStyleBackColor = true;
-	// 
-	// InputViewerRestorePos
-	// 
-	this.InputViewerRestorePos.Location = new System.Drawing.Point(390, 6);
-	this.InputViewerRestorePos.Name = "InputViewerRestorePos";
-	this.InputViewerRestorePos.Size = new System.Drawing.Size(204, 23);
-	this.InputViewerRestorePos.TabIndex = 25;
-	this.InputViewerRestorePos.Text = "Restore Input Viewer Default Position";
-	this.InputViewerRestorePos.UseVisualStyleBackColor = true;
-	this.InputViewerRestorePos.Click += new System.EventHandler(this.InputViewerRestorePos_Click);
-	// 
-	// InputBorder
-	// 
-	this.InputBorder.Enabled = false;
-	this.InputBorder.Location = new System.Drawing.Point(6, 6);
-	this.InputBorder.Name = "InputBorder";
-	this.InputBorder.Size = new System.Drawing.Size(161, 24);
-	this.InputBorder.TabIndex = 1;
-	this.InputBorder.Text = "Show Input Display Border";
-	this.InputBorder.UseVisualStyleBackColor = true;
-	this.InputBorder.CheckedChanged += new System.EventHandler(this.InputBorder_CheckedChanged);
+	this.UseCustomInputViewerImages.Location = new System.Drawing.Point(6, 6);
+	this.UseCustomInputViewerImages.Name = "UseCustomInputViewerImages";
+	this.UseCustomInputViewerImages.Size = new System.Drawing.Size(321, 24);
+	this.UseCustomInputViewerImages.TabIndex = 26;
+	this.UseCustomInputViewerImages.Text = "Use Custom Images For Input Viewer";
+	this.UseCustomInputViewerImages.UseVisualStyleBackColor = true;
+	this.UseCustomInputViewerImages.CheckedChanged += new System.EventHandler(this.UseCustomInputViewerImages_CheckedChanged);
 	// 
 	// SplitterConfig
 	// 
@@ -2130,11 +1947,11 @@ private void InitializeComponent()
 	// UndoUpdateLiveSplit
 	// 
 	this.UndoUpdateLiveSplit.Enabled = false;
-	this.UndoUpdateLiveSplit.Location = new System.Drawing.Point(451, 91);
+	this.UndoUpdateLiveSplit.Location = new System.Drawing.Point(303, 120);
 	this.UndoUpdateLiveSplit.Name = "UndoUpdateLiveSplit";
-	this.UndoUpdateLiveSplit.Size = new System.Drawing.Size(143, 23);
+	this.UndoUpdateLiveSplit.Size = new System.Drawing.Size(291, 23);
 	this.UndoUpdateLiveSplit.TabIndex = 43;
-	this.UndoUpdateLiveSplit.Text = "Undo Split Update Livesplit";
+	this.UndoUpdateLiveSplit.Text = "Undo Split (Update Livesplit)";
 	this.UndoUpdateLiveSplit.UseVisualStyleBackColor = true;
 	this.UndoUpdateLiveSplit.Click += new System.EventHandler(this.UndoUpdateLiveSplit_Click);
 	// 
@@ -2151,22 +1968,22 @@ private void InitializeComponent()
 	// SkipUpdateLivesplit
 	// 
 	this.SkipUpdateLivesplit.Enabled = false;
-	this.SkipUpdateLivesplit.Location = new System.Drawing.Point(154, 91);
+	this.SkipUpdateLivesplit.Location = new System.Drawing.Point(303, 91);
 	this.SkipUpdateLivesplit.Name = "SkipUpdateLivesplit";
-	this.SkipUpdateLivesplit.Size = new System.Drawing.Size(143, 23);
+	this.SkipUpdateLivesplit.Size = new System.Drawing.Size(291, 23);
 	this.SkipUpdateLivesplit.TabIndex = 41;
-	this.SkipUpdateLivesplit.Text = "Skip Split Update Livesplit";
+	this.SkipUpdateLivesplit.Text = "Skip Split (Update Livesplit)";
 	this.SkipUpdateLivesplit.UseVisualStyleBackColor = true;
 	this.SkipUpdateLivesplit.Click += new System.EventHandler(this.SkipUpdateLivesplit_Click);
 	// 
 	// UndoSplit
 	// 
 	this.UndoSplit.Enabled = false;
-	this.UndoSplit.Location = new System.Drawing.Point(303, 91);
+	this.UndoSplit.Location = new System.Drawing.Point(6, 120);
 	this.UndoSplit.Name = "UndoSplit";
-	this.UndoSplit.Size = new System.Drawing.Size(143, 23);
+	this.UndoSplit.Size = new System.Drawing.Size(291, 23);
 	this.UndoSplit.TabIndex = 40;
-	this.UndoSplit.Text = "Undo Split No Livesplit";
+	this.UndoSplit.Text = "Undo Split (Do Not Update Livesplit)";
 	this.UndoSplit.UseVisualStyleBackColor = true;
 	this.UndoSplit.Click += new System.EventHandler(this.UndoSplit_Click);
 	// 
@@ -2175,9 +1992,9 @@ private void InitializeComponent()
 	this.SkipSplit.Enabled = false;
 	this.SkipSplit.Location = new System.Drawing.Point(6, 91);
 	this.SkipSplit.Name = "SkipSplit";
-	this.SkipSplit.Size = new System.Drawing.Size(142, 23);
+	this.SkipSplit.Size = new System.Drawing.Size(291, 23);
 	this.SkipSplit.TabIndex = 39;
-	this.SkipSplit.Text = "Skip Split No Livesplit";
+	this.SkipSplit.Text = "Skip Split (Do Not Update Livesplit)";
 	this.SkipSplit.UseVisualStyleBackColor = true;
 	this.SkipSplit.Click += new System.EventHandler(this.SkipSplit_Click);
 	// 
@@ -2342,6 +2159,23 @@ private void InitializeComponent()
 	this.TabControl.SizeMode = System.Windows.Forms.TabSizeMode.FillToRight;
 	this.TabControl.TabIndex = 27;
 	// 
+	// label3
+	// 
+	this.label3.Location = new System.Drawing.Point(156, 36);
+	this.label3.Name = "label3";
+	this.label3.Size = new System.Drawing.Size(67, 23);
+	this.label3.TabIndex = 31;
+	this.label3.Text = "Current File:";
+	this.label3.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+	// 
+	// NotPressedSelectImageDialogue
+	// 
+	this.NotPressedSelectImageDialogue.FileName = "openFileDialog1";
+	// 
+	// PressedSelectImageDialogue
+	// 
+	this.PressedSelectImageDialogue.FileName = "openFileDialog2";
+	// 
 	// ToolWindow
 	// 
 	this.ClientSize = new System.Drawing.Size(632, 369);
@@ -2351,6 +2185,7 @@ private void InitializeComponent()
 	this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Close);
 	this.tabPage7.ResumeLayout(false);
 	this.InputConfig.ResumeLayout(false);
+	this.InputConfig.PerformLayout();
 	this.SplitterConfig.ResumeLayout(false);
 	this.UISettings.ResumeLayout(false);
 	this.UISettings.PerformLayout();
@@ -2360,51 +2195,40 @@ private void InitializeComponent()
 	this.ResumeLayout(false);
 }
 
-private System.Windows.Forms.Label label37;
-private System.Windows.Forms.Label label38;
-private System.Windows.Forms.Label label39;
-private System.Windows.Forms.Label label40;
-private System.Windows.Forms.Label label41;
-private System.Windows.Forms.Label label42;
-private System.Windows.Forms.Label label43;
-private System.Windows.Forms.Label label44;
-private System.Windows.Forms.Label label45;
-private System.Windows.Forms.Label label46;
-private System.Windows.Forms.Label label47;
-private System.Windows.Forms.Label label48;
+private System.Windows.Forms.OpenFileDialog NotPressedSelectImageDialogue;
+private System.Windows.Forms.OpenFileDialog PressedSelectImageDialogue;
 
-private System.Windows.Forms.CheckBox checkBox2;
+private System.Windows.Forms.Button SaveButtonPosition;
 
-private System.Windows.Forms.Label label26;
-private System.Windows.Forms.Label label27;
-private System.Windows.Forms.Label label28;
-private System.Windows.Forms.Label label29;
-private System.Windows.Forms.Label label30;
-private System.Windows.Forms.Label label31;
-private System.Windows.Forms.Label label32;
-private System.Windows.Forms.Label label33;
-private System.Windows.Forms.Label label34;
-private System.Windows.Forms.Label label35;
-private System.Windows.Forms.Label label36;
+private System.Windows.Forms.Label Notes;
 
-private System.Windows.Forms.Label label25;
+private System.Windows.Forms.CheckBox UseDefaultImagesForButton;
+
+private System.Windows.Forms.Button SelectImageForPressed;
+private System.Windows.Forms.TextBox PressedPathDisplay;
+private System.Windows.Forms.Label label16;
+
+private System.Windows.Forms.TextBox NotPressedPathDisplay;
+private System.Windows.Forms.Button SelectImageForNotPressed;
+
+private System.Windows.Forms.Label label15;
+
+private System.Windows.Forms.CheckBox UnlockButton;
+
+private System.Windows.Forms.TextBox ButtonY;
+private System.Windows.Forms.Label label14;
+
+private System.Windows.Forms.TextBox ButtonX;
+
+private System.Windows.Forms.Label label13;
+
+private System.Windows.Forms.ComboBox InputConfigButtons;
 
 private System.Windows.Forms.Label label11;
-private System.Windows.Forms.Label label13;
-private System.Windows.Forms.Label label14;
-private System.Windows.Forms.Label label15;
-private System.Windows.Forms.Label label16;
-private System.Windows.Forms.Label label17;
-private System.Windows.Forms.Label label18;
-private System.Windows.Forms.Label label19;
-private System.Windows.Forms.Label label20;
-private System.Windows.Forms.Label label21;
-private System.Windows.Forms.Label label22;
-private System.Windows.Forms.Label label23;
-private System.Windows.Forms.Label label24;
 
-private System.Windows.Forms.CheckBox checkBox1;
 private System.Windows.Forms.Label label3;
+
+private System.Windows.Forms.CheckBox UseCustomInputViewerImages;
 
 private System.Windows.Forms.Button UndoUpdateLiveSplit;
 
@@ -2424,8 +2248,6 @@ private System.Windows.Forms.ColumnHeader EName;
 private System.Windows.Forms.ListView Splits;
 
 private System.Windows.Forms.CheckBox MovieMode;
-
-private System.Windows.Forms.Button InputViewerRestorePos;
 
 private System.Windows.Forms.Label label12;
         private System.Windows.Forms.Label SplitId;
@@ -2526,8 +2348,6 @@ private System.Windows.Forms.Label label12;
         private System.Windows.Forms.CheckBox EnableSpecificChroma;
 
         private System.Windows.Forms.CheckBox ChromaEnable;
-
-        private System.Windows.Forms.CheckBox InputBorder;
 
 		private System.Windows.Forms.CheckBox InputViewerEnable;
 #endregion

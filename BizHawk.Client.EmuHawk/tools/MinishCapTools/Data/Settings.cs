@@ -2,20 +2,13 @@
 {
     public class Settings
     {
-        public Settings(bool initializeDefaults = true)
+        public Settings()
         {
             BackgroundChroma = new BackgroundChroma();
             Padding = new Padding();
             InputViewer = new InputViewer();
 			
-			if (!initializeDefaults) return;
-			
-			DefaultSettings = new Settings(false);
-			DefaultSettings.BackgroundChroma.RestoreDefaults();
-			DefaultSettings.Padding.RestoreDefaults();
-			DefaultSettings.InputViewer.RestoreDefaults();
-			DefaultSettings.MovieMode = false;
-			DefaultSettings.EnableAutoSplitter = false;
+			DefaultSettings = new DefaultSettings(true);
 		}
         
         public bool MovieMode { get; set; }
@@ -28,7 +21,7 @@
         
         public InputViewer InputViewer { get; set; }
 		
-		public Settings DefaultSettings { get; set; }
+		public DefaultSettings DefaultSettings { get; set; }
 
         public void RestoreDefaults()
 		{

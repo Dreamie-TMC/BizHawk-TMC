@@ -2,9 +2,11 @@
 
 namespace MinishCapTools.Data
 {
-	public class InputViewerCustomButton
+	public class InputViewerButtonConfig
 	{
 		public InputViewerButton Button { get; set; }
+		
+		public bool UseDefaultVersionOfButton { get; set; }
 		
 		public string ButtonNotPressedImagePath { get; set; }
 		
