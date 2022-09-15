@@ -41,6 +41,9 @@
 		<None Include="$(ProjectDir)../../Assets/**/*.*" CopyToOutputDirectory="PreserveNewest" />
 		<None Remove="packages.config" />
 		<None Remove="Properties/Resources.resources" />
+		<Compile Update="tools\AutoSplitter\AutoSplitter.cs">
+		  <SubType>Form</SubType>
+		</Compile>
 	</ItemGroup>
 	<ItemGroup>
 		<Compile Update="ArchiveChooser.cs" SubType="Form" />

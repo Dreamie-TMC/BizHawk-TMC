@@ -1212,6 +1212,13 @@ namespace BizHawk.Client.EmuHawk
 			GameSharkConverterMenuItem.Enabled = Tools.IsAvailable<GameShark>();
 			MacroToolMenuItem.Enabled = MovieSession.Movie.IsActive() && Tools.IsAvailable<MacroInputTool>();
 			VirtualPadMenuItem.Enabled = Emulator.ControllerDefinition.Any();
+
+			AutosplitterMenuItem.Enabled = Tools.IsAvailable<AutoSplitter.AutoSplitter>();
+		}
+
+		private void AutosplitterMenuItem_Click(object sender, EventArgs e)
+		{
+			Tools.Load<AutoSplitter.AutoSplitter>();
 		}
 
 		private void ExternalToolMenuItem_DropDownOpening(object sender, EventArgs e)
